@@ -27,15 +27,16 @@ initializeSubscribersFile();
 let keywordsData = JSON.parse(fs.readFileSync(keywordsDataPath, 'utf8'));
 let subscribersData = JSON.parse(fs.readFileSync(subscribersDataPath, 'utf8'));
 
-async function scrapeKeywords(keyword, source) {
+// 
+async function scrapeKeywords(keyword) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
   try {
     let baseUrl = '';
-    switch (source) {
-      case 'example':
-        baseUrl = 'https://www.example.com/search?q=';
+    switch (keyword) {
+      case 'cricket':
+        baseUrl = `https://www.cnn.com/search?q=${keyword}`;
         break;
       // Add cases for other sources as needed
 
@@ -73,7 +74,7 @@ async function scrapeKeywords(keyword, source) {
       return false; // Indicate no new keywords found
     }
   } catch (err) {
-    console.error(`Error during web scraping for keyword '${keyword}' and source '${source}':`, err);
+    console.error(`Error during web scraping for keyword '${keyword} and source :`, err);
     return false; // Indicate scraping error
   } finally {
     await browser.close();
@@ -159,11 +160,11 @@ async function fetchUpdates(keywords, sources, lastDigestSent) {
 app.use(express.json());
 
 app.post('/keywords', async (req, res) => {
-  const { keyword, email, source, digestInterval } = req.body;
+  const { keyword, email, source, frequency } = req.body;
 
   try {
     keywordsData.push({ keyword, source, urls: [] });
-    subscribersData.push({ email, keywords: [keyword], sources: [source], lastDigestSent: Date.now(), digestInterval });
+    subscribersData.push({ email, keywords: [keyword], sources: [source], lastDigestSent: Date.now(), frequency });
 
     const newKeywordsFound = await scrapeKeywords(keyword, source);
 
@@ -188,9 +189,10 @@ app.post('/keywords', async (req, res) => {
 setInterval(async () => {
   try {
     for (const subscriber of subscribersData) {
-      const { email, keywords, sources, lastDigestSent, digestInterval } = subscriber;
+      const { email, keywords, sources, lastDigestSent, frequency } = subscriber;
 
-      if (Date.now() - lastDigestSent >= digestInterval) {
+      // Check if the frequency interval has passed since the last email
+      if (Date.now() - lastDigestSent >= getFrequencyInterval(frequency)) {
         const updates = await fetchUpdates(keywords, sources, lastDigestSent);
 
         if (updates.length > 0) {
@@ -203,6 +205,17 @@ setInterval(async () => {
     console.error('Error in the background task:', err);
   }
 }, 60 * 60 * 1000);
+
+function getFrequencyInterval(frequency) {
+  // Define the frequency intervals in milliseconds
+  const frequencyIntervals = {
+    daily: 24 * 60 * 60 * 1000,     // for 24 hours
+    weekly: 7 * 24 * 60 * 60 * 1000, // for 7 days
+    monthly: 30 * 24 * 60 * 60 * 1000, // for 30 days (approximate)
+  };
+
+  return frequencyIntervals[frequency] || 24 * 60 * 60 * 1000; // Default to daily if frequency is not recognized
+}
 
 app.use((err, req, res, next) => {
   console.error('Error:', err);
