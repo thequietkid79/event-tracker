@@ -8,11 +8,11 @@ import axios from 'axios';
 const app = express();
 app.use(bodyParser.json());
 
-// const GOOGLE_SEARCH_API_KEY = 'AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8';
+const GOOGLE_SEARCH_API_KEY = 'AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8';
 const PALM_API_KEY = 'AIzaSyBqWq0lfhwOGviXAxoTVVpd38e6Zzj7XnI';
 
-const emailFrom = ''; // Replace with your Gmail email address
-let emailTo; // Variable to store the recipient email dynamically
+const emailFrom = GMAIL_EMAIL;
+let emailTo;
 
 const updateStore = {
   updates: [],
@@ -22,7 +22,6 @@ const cronExpressions = {
   hourly: '0 * * * *',
   daily: '0 9 * * *',
   weekly: '0 9 * * 1',
-  monthly: '0 9 1 * *',
 };
 
 const transporter = nodemailer.createTransport({
@@ -49,21 +48,13 @@ async function sendEmail(from, to, subject, text) {
   }
 }
 
-async function getSearchResults() {
-  // const customsearch = google.customsearch('v1'); // Use the correct Google Custom Search API
-
-  const data  = await axios.get("https://www.googleapis.com/customsearch/v1?key=AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8&cx=a60c4c10e04c546d5&q=world-cup");
-    // auth: 'AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8',
-    // cx: 'a60c4c10e04c546d5',
-    // q: topic
-  const searchResults = data.data.items;
+async function getSearchResults(topic) {
+  const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_SEARCH_API_KEY}&cx=a60c4c10e04c546d5&q=${topic}`;
+  const response = await axios.get(url);
+  const searchResults = response.data.items;
   console.log('Search results:', searchResults);
   return searchResults;
-
 }
-
-
-
 
 async function getInsights(title, snippet) {
   const palmResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta2/models/embedding-gecko-001:embedText?key=${PALM_API_KEY}`, {
@@ -105,7 +96,6 @@ async function processSearchResults(searchResults) {
   return updates;
 }
 
-
 function formatEmailBody(updates) {
   let emailBody = '';
 
@@ -130,10 +120,14 @@ function formatEmailBody(updates) {
   return emailBody;
 }
 
+app.get("/", (req, res) => {
+  res.render("index.ejs");
+});
+
 app.post('/search', async (req, res) => {
-  const topic = req.body.topic;
-  const scheduleOption = req.body.scheduleOption;
-  emailTo = req.body.email; // Set the emailTo variable dynamically
+  const { topic, scheduleOption, email } = req.body;
+  emailTo = email;
+
   if (!cronExpressions.hasOwnProperty(scheduleOption)) {
     res.json({
       success: false,
@@ -141,25 +135,20 @@ app.post('/search', async (req, res) => {
     });
     return;
   }
-  
+
   const cronExpression = cronExpressions[scheduleOption];
   const searchResults = await getSearchResults(topic);
   const updates = await processSearchResults(searchResults);
+
   cron.schedule(cronExpression, async () => {
     const emailBody = formatEmailBody(updates);
 
-    // Send an email with the retrieved updates
     await sendEmail(emailFrom, emailTo, `Latest Updates on '${topic}'`, emailBody);
   });
 
-  res.json({
-    success: true,
-    message: `Updates will be sent according to your chosen schedule: ${scheduleOption}`,
-  });
-  
+  res.render("index.ejs", { updates });
 });
 
 app.listen(3000, () => {
   console.log('Server listening on port 3000');
 });
-
