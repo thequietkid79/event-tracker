@@ -1,205 +1,165 @@
 import express from 'express';
-import puppeteer from 'puppeteer';
-import nodemailer from 'nodemailer';
-import fs from 'fs';
 import bodyParser from 'body-parser';
+import { google } from 'googleapis';
+import cron from 'node-cron';
+import nodemailer from 'nodemailer';
+import axios from 'axios';
 
 const app = express();
-const port = 3000;
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
+// const GOOGLE_SEARCH_API_KEY = 'AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8';
+const PALM_API_KEY = 'AIzaSyBqWq0lfhwOGviXAxoTVVpd38e6Zzj7XnI';
 
-// Paths for storing data files 
-const keywordsDataPath = './keywords.json';
-const subscribersDataPath = './subscribers.json';
+const emailFrom = ''; // Replace with your Gmail email address
+let emailTo; // Variable to store the recipient email dynamically
 
-// Function to initialize the keywords data file if it doesn't exist
-function initializeKeywordsFile() {
-  if (!fs.existsSync(keywordsDataPath)) {
-    fs.writeFileSync(keywordsDataPath, '[]');
-  }
-}
+const updateStore = {
+  updates: [],
+};
 
-// Function to initialize the subscribers data file if it doesn't exist
-function initializeSubscribersFile() {
-  if (!fs.existsSync(subscribersDataPath)) {
-    fs.writeFileSync(subscribersDataPath, '[]');
-  }
-}
+const cronExpressions = {
+  hourly: '0 * * * *',
+  daily: '0 9 * * *',
+  weekly: '0 9 * * 1',
+  monthly: '0 9 1 * *',
+};
 
-initializeKeywordsFile();
-initializeSubscribersFile();
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'my', // Replace with your Gmail email address
+    pass: 'my', // Replace with your Gmail password or an application-specific password
+  },
+});
 
-// Read data from the keywords and subscribers files
-let keywordsData = JSON.parse(fs.readFileSync(keywordsDataPath, 'utf8'));
-let subscribersData = JSON.parse(fs.readFileSync(subscribersDataPath, 'utf8'));
-
-// 
-async function scrapeKeywords(keyword) {
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-
-  try {
-    let baseUrl = `https://www.espncricinfo.com/cricket-news`;
-    
-
-    await page.goto(baseUrl);
-
-    // Adjust these selectors to match the structure of the CNN search results page
-    const articles = await page.$$('.ds-p-0');
-    const titleSelector = 'ds-text-title-s';
-    const summarySelector = 'ds-text-compact-s';
-    const urlSelector = 'ds-text-compact-xs';
-
-    let newKeywords = false;
-    for (const article of articles) {
-      const title = await article.$eval(titleSelector, element => element.textContent);
-      const summary = await article.$eval(summarySelector, element => element.textContent);
-      const url = await article.$eval(urlSelector, element => element.getAttribute('href'));
-
-      console.log('Title:', title);
-      console.log('Summary:', summary);
-      console.log('URL:', url);
-
-      const existingKeywordIndex = keywordsData.findIndex(keywordData => keywordData.keyword === keyword);
-      if (existingKeywordIndex === -1) {
-        newKeywords = true;
-        keywordsData.push({ keyword, title, urls: [{ url, addedAt: Date.now() }], summary });
-      } else {
-        const existingKeyword = keywordsData[existingKeywordIndex];
-        if (!existingKeyword.urls.some(u => u.url === url)) {
-          newKeywords = true;
-          existingKeyword.urls.push({ url, addedAt: Date.now() });
-        }
-      }
-    }
-
-    if (newKeywords) {
-      fs.writeFileSync(keywordsDataPath, JSON.stringify(keywordsData, null, 2));
-      return true; // Indicate new keywords found
-    } else {
-      return false; // Indicate no new keywords found
-    }
-  } catch (err) {
-    console.error(`Error during web scraping for keyword '${keyword}':`, err);
-    return false; // Indicate scraping error
-  } finally {
-    await browser.close();
-  }
-}
-
-
-async function sendDigestEmail(email, updates) {
-  const emailOptions = {
-    from: '"Aniket Ghosh" <ghoshaniket1000@gmail.com>',
-    to: email,
-    subject: 'Digest Update Alert',
-    text: `Here is your digest of updates:\n\n${updates.join('\n\n')}`,
+async function sendEmail(from, to, subject, text) {
+  const mailOptions = {
+    from,
+    to,
+    subject,
+    text,
   };
 
   try {
-    await nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: true,
-      auth: {
-        user: 'ghoshaniket1000@gmail.com',
-        pass: 'kubernetesismine',
-      },
-    }).sendMail(emailOptions);
-
-    console.log('Digest Email sent to:', email);
-  } catch (err) {
-    console.error('Error sending digest email:', err);
+    await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully.');
+  } catch (error) {
+    console.error('Error sending email:', error);
   }
 }
 
-async function fetchUpdates(keywords, lastDigestSent) {
+async function getSearchResults() {
+  // const customsearch = google.customsearch('v1'); // Use the correct Google Custom Search API
+
+  const data  = await axios.get("https://www.googleapis.com/customsearch/v1?key=AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8&cx=a60c4c10e04c546d5&q=world-cup");
+    // auth: 'AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8',
+    // cx: 'a60c4c10e04c546d5',
+    // q: topic
+  const searchResults = data.data.items;
+  console.log('Search results:', searchResults);
+  return searchResults;
+
+}
+
+
+
+
+async function getInsights(title, snippet) {
+  const palmResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta2/models/embedding-gecko-001:embedText?key=${PALM_API_KEY}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      input: {
+        text: title + ' ' + snippet,
+      },
+    }),
+  });
+
+  const palmData = await palmResponse.json();
+  const { entities, tags } = palmData;
+
+  return { entities, tags };
+}
+
+async function processSearchResults(searchResults) {
   const updates = [];
 
-  for (const keyword of keywords) {
-    const keywordData = keywordsData.find(kd => kd.keyword === keyword);
+  for (const searchResult of searchResults) {
+    const { title, link, snippet } = searchResult;
 
-    if (keywordData) {
-      // Filter the URLs that were added after the last digest was sent
-      const newUrls = keywordData.urls.filter(url => url.addedAt > lastDigestSent);
+    const insights = await getInsights(title, snippet);
 
-      if (newUrls.length > 0) {
-        updates.push({
-          keyword,
-          urls: newUrls,
-        });
-      }
-    }
+    const update = {
+      title,
+      url: link,
+      snippet,
+      insights,
+    };
+
+    updates.push(update);
   }
 
   return updates;
 }
 
 
-app.use(express.json());
+function formatEmailBody(updates) {
+  let emailBody = '';
 
-app.post('/keywords', async (req, res) => {
-  const { keyword, email, frequency } = req.body;
+  for (const update of updates) {
+    emailBody += `\n**Title:** ${update.title}\n`;
+    emailBody += `**URL:** ${update.url}\n`;
+    emailBody += `**Summary:** ${update.summary}\n`;
+    emailBody += `**Insights:**\n`;
 
-  try {
-    keywordsData.push({ keyword, urls: [] });
-    subscribersData.push({ email, keywords: [keyword], lastDigestSent: Date.now(), frequency });
-
-    const newKeywordsFound = await scrapeKeywords(keyword);
-
-    if (newKeywordsFound) {
-      fs.writeFileSync(keywordsDataPath, JSON.stringify(keywordsData, null, 2));
-      fs.writeFileSync(subscribersDataPath, JSON.stringify(subscribersData, null, 2));
-
-      res.status(200).json({ message: 'Keyword added successfully' });
-    } else {
-      res.status(200).json({ message: 'No new keywords found' });
+    for (const entity of update.entities) {
+      emailBody += `• ${entity.type}: ${entity.name}\n`;
     }
-  } catch (err) {
-    console.error('Error adding keyword:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+
+    for (const tag of update.tags) {
+      emailBody += `• ${tag.type}: ${tag.name}\n`;
+    }
+
+    emailBody += '\n';
+    console.log(emailBody);
   }
-});
 
-
-function getFrequencyInterval(frequency) {
-  // Define the frequency intervals in milliseconds
-  const frequencyIntervals = {
-    daily: 24 * 60 * 60 * 1000,     // for 24 hours
-    weekly: 7 * 24 * 60 * 60 * 1000, // for 7 days
-    monthly: 30 * 24 * 60 * 60 * 1000, // for 30 days (approximate)
-  };
-
-  return frequencyIntervals[frequency] || 24 * 60 * 60 * 1000; // Default to daily if frequency is not recognized
+  return emailBody;
 }
 
-setInterval(async () => {
-  try {
-    for (const subscriber of subscribersData) {
-      const { email, keywords, lastDigestSent, frequency } = subscriber;
-
-      // Check if the frequency interval has passed since the last email
-      if (Date.now() - lastDigestSent >= getFrequencyInterval(frequency)) {
-        const updates = await fetchUpdates(keywords, lastDigestSent);
-
-        if (updates.length > 0) {
-          await sendDigestEmail(email, updates);
-          subscriber.lastDigestSent = Date.now();
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error in the background task:', err);
+app.post('/search', async (req, res) => {
+  const topic = req.body.topic;
+  const scheduleOption = req.body.scheduleOption;
+  emailTo = req.body.email; // Set the emailTo variable dynamically
+  if (!cronExpressions.hasOwnProperty(scheduleOption)) {
+    res.json({
+      success: false,
+      message: `Invalid schedule option: ${scheduleOption}`,
+    });
+    return;
   }
-}, 60 * 60 * 1000); // Run every hour
+  
+  const cronExpression = cronExpressions[scheduleOption];
+  const searchResults = await getSearchResults(topic);
+  const updates = await processSearchResults(searchResults);
+  cron.schedule(cronExpression, async () => {
+    const emailBody = formatEmailBody(updates);
 
+    // Send an email with the retrieved updates
+    await sendEmail(emailFrom, emailTo, `Latest Updates on '${topic}'`, emailBody);
+  });
 
-app.use((err, req, res) => {
-  console.error('Error:', err);
-  res.status(500).send('Internal Server Error');
+  res.json({
+    success: true,
+    message: `Updates will be sent according to your chosen schedule: ${scheduleOption}`,
+  });
+  
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+app.listen(3000, () => {
+  console.log('Server listening on port 3000');
 });
+

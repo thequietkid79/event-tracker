@@ -3,10 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/styles/main.css" rel="stylesheet" >
-    <title>Document</title>
+    <title>Email Subscription</title>
+    <link href="public/styles/main.css" rel="stylesheet">
 </head>
 <body>
-    hello world!
+
+    <div class="container">
+        <h2>Email Subscription</h2>
+
+        <form id="subscriptionForm">
+            <label for="topic">Select your interested topic:</label>
+            <select id="topic" name="topic">
+                <option value="technology">Technology</option>
+                <option value="science">Science</option>
+                <option value="business">Business</option>
+                <!-- Add more options as needed -->
+            </select>
+
+            <label for="frequency">Select email frequency:</label>
+            <select id="frequency" name="frequency">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <!-- Add more options as needed -->
+            </select>
+
+            <button type="button" onclick="subscribe()">Subscribe</button>
+        </form>
+    </div>
+
+    <script src="script.js"></script>
+
 </body>
 </html>
