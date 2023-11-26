@@ -1,22 +1,21 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { google } from 'googleapis';
 import cron from 'node-cron';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
+import 'dotenv/config'
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.static("public"));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-const GOOGLE_SEARCH_API_KEY = 'AIzaSyBor1ImAyUkZ5kmFw2693BfS9Dn0gWTZB8';
-const PALM_API_KEY = 'AIzaSyBqWq0lfhwOGviXAxoTVVpd38e6Zzj7XnI';
+const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_API;
+const PALM_API_KEY = process.env.PLAM_API;
 
-const emailFrom = GMAIL_EMAIL;
+const emailFrom = 'my';
 let emailTo;
 
-const updateStore = {
-  updates: [],
-};
+const userSubscriptions = {}; // Keep track of user subscriptions
 
 const cronExpressions = {
   hourly: '0 * * * *',
@@ -27,8 +26,8 @@ const cronExpressions = {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'my', // Replace with your Gmail email address
-    pass: 'my', // Replace with your Gmail password or an application-specific password
+    user: process.env.MY_EMAIL, // Replace with your Gmail email address
+    pass: process.env.MY_PASSWORD, // Replace with your Gmail password or an application-specific password
   },
 });
 
@@ -52,7 +51,6 @@ async function getSearchResults(topic) {
   const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_SEARCH_API_KEY}&cx=a60c4c10e04c546d5&q=${topic}`;
   const response = await axios.get(url);
   const searchResults = response.data.items;
-  console.log('Search results:', searchResults);
   return searchResults;
 }
 
@@ -124,9 +122,11 @@ app.get("/", (req, res) => {
   res.render("index.ejs");
 });
 
-app.post('/search', async (req, res) => {
-  const { topic, scheduleOption, email } = req.body;
-  emailTo = email;
+app.post('/subscribe', async (req, res) => {
+  // const { topic, scheduleOption, email } = req.body;
+  const topic = req.body.topic;
+  const scheduleOption = req.body.scheduleOption;
+  const email = req.body.email;
 
   if (!cronExpressions.hasOwnProperty(scheduleOption)) {
     res.json({
@@ -137,16 +137,63 @@ app.post('/search', async (req, res) => {
   }
 
   const cronExpression = cronExpressions[scheduleOption];
-  const searchResults = await getSearchResults(topic);
+
+if (!userSubscriptions[email]) {
+  userSubscriptions[email] = {
+    topics: [],
+    cronJob: null,
+  };
+}
+
+if (!userSubscriptions[email].topics.includes(topic)) {
+  userSubscriptions[email].topics.push(topic);
+
+  // If there's an existing cron job, cancel it
+  if (userSubscriptions[email].cronJob) {
+    userSubscriptions[email].cronJob.destroy();
+  }
+}
+
+// Fetch updates for all subscribed topics
+const allUpdates = [];
+for (const subscribedTopic of userSubscriptions[email].topics) {
+  const searchResults = await getSearchResults(subscribedTopic);
   const updates = await processSearchResults(searchResults);
+  console.log(updates);
+  allUpdates.push(...updates);
+}
 
-  cron.schedule(cronExpression, async () => {
-    const emailBody = formatEmailBody(updates);
+    // Create a new cron job with the updated list of topics
+  userSubscriptions[email].cronJob = cron.schedule(cronExpression, async () => {
+    
 
-    await sendEmail(emailFrom, emailTo, `Latest Updates on '${topic}'`, emailBody);
+    const emailBody = formatEmailBody(allUpdates);
+
+    await sendEmail(emailFrom, email, `Latest Updates`, emailBody);
   });
 
-  res.render("index.ejs", { updates });
+    res.render("index.ejs", { message: `Subscribed to topic: ${topic}`});
+});
+
+app.post('/unsubscribe', (req, res) => {
+  const { topic, email } = req.body;
+
+  if (userSubscriptions[email]) {
+    // Remove the specified topic from the user's subscriptions
+    userSubscriptions[email].topics = userSubscriptions[email].topics.filter(t => t !== topic);
+
+    // If there are no more topics, cancel the cron job
+    if (userSubscriptions[email].topics.length === 0 && userSubscriptions[email].cronJob) {
+      userSubscriptions[email].cronJob.destroy();
+    }
+
+    res.render("index.ejs", { message: `Unsubscribed from topic: ${topic}` });
+  } else {
+    res.json({
+      success: false,
+      message: `User not found or not subscribed to any topics`,
+    });
+  }
 });
 
 app.listen(3000, () => {
