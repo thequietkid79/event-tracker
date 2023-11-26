@@ -1,10 +1,10 @@
-[![](https://i.imgur.com/2zQQ2yub.png)]()
+[![](https://i.imgur.com/2zQQ2yub.png)](localhost:3001)
 
 Event Tracker
 ====
 Keep track of all the updates to any event you want to track from around the world
 
-[**Project website**]()
+[**Project website**](localhost:3001)
 
 Usage
 ====
