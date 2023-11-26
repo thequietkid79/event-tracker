@@ -12,8 +12,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_API;
 const PALM_API_KEY = process.env.PLAM_API;
 
-const emailFrom = 'my';
-let emailTo;
+const emailFrom = process.env.MY_EMAIL;
 
 const userSubscriptions = {}; // Keep track of user subscriptions
 
@@ -172,11 +171,17 @@ for (const subscribedTopic of userSubscriptions[email].topics) {
     await sendEmail(emailFrom, email, `Latest Updates`, emailBody);
   });
 
-    res.render("index.ejs", { message: `Subscribed to topic: ${topic}`});
+  // Send confirmation email
+  const confirmationMessage = `Subscribed to topic: ${topic}`;
+  await sendEmail(emailFrom, email, 'Subscription Confirmation', confirmationMessage);
+
+  res.render("index.ejs", { message: confirmationMessage });
 });
 
 app.post('/unsubscribe', (req, res) => {
-  const { topic, email } = req.body;
+  // const { topic, email } = req.body;
+  const topic = req.body.topic;
+  const email = req.body.email;
 
   if (userSubscriptions[email]) {
     // Remove the specified topic from the user's subscriptions
