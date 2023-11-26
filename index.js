@@ -76,7 +76,7 @@ function formatEmailBody(updates) {
 
   for (const update of updates) {
     emailBody += `
-        <div style="margin-bottom: 20px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background-color: #ffffff;">
+        <div style="margin-bottom: 20px; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background-color: #f5f5f5;">
             <h2 style="color: #333; font-size: 20px; margin-bottom: 10px;">${update.title}</h2>
             <p style="color: #555; font-size: 14px; margin-bottom: 10px;">
                 <strong>URL:</strong> <a href="${update.url}" style="color: #007bff; text-decoration: none;">${update.url}</a>
