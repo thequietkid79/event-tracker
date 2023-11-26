@@ -7,7 +7,8 @@
     <link href="styles/main.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Event Tracker</h1>
+    <div>
+    <h1 contenteditable spellcheck="false">Event Tracker</h1>
     <form action="/subscribe" method="POST">
         <label for="topic">Topic:</label>
         <input type="text" id="topic" name="topic" placeholder="Input your topic" autofocus required><br><br>
@@ -25,17 +26,6 @@
         
         <input type="submit" value="Subscribe">
     </form>
-
-    <div>
-        <% if (locals.subscribedTopics && locals.subscribedTopics.length > 0) { %>
-            <h2>Subscribed Topics</h2>
-            <ul>
-                <% for (const topic of subscribedTopics) { %>
-                    <li><%= topic %></li>
-                <% } %>  
-            </ul>
-        <% } %>
-    </div>
-
+</div>
 </body>
 </html>

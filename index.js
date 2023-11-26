@@ -13,13 +13,13 @@ const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_API;
 
 const emailFrom = process.env.MY_EMAIL;
 
-const userSubscriptions = {}; // Keep track of user subscriptions
+const userSubscriptions = {};
 
 const cronExpressions = {
   hourly: '0 * * * *',
   daily: '0 9 * * *',
   weekly: '0 9 * * 1',
-  everyMinute: '* * * * *', // Option for every minute
+  everyMinute: '* * * * *',
 };
 
 const transporter = nodemailer.createTransport({
@@ -136,6 +136,6 @@ app.post('/subscribe', async (req, res) => {
   res.render("index.ejs", { message: subscribedTopics });
 });
 
-app.listen(3000, () => {
-  console.log('Server listening on port 3000');
+app.listen(3001, () => {
+  console.log('Server listening on port 3001');
 });
