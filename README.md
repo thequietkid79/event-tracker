@@ -1,4 +1,4 @@
-[![](https://i.imgur.com/2zQQ2yub.png)](http://localhost:3001)
+[![](https://imgur.com/a/aDdd6lT)](http://localhost:3001)
 
 Event Tracker
 ====
