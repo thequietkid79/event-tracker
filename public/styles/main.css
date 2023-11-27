@@ -103,7 +103,7 @@ h1 {
     font-size: 4rem;
     color: rgb(8, 8, 8);
     text-align: center;
-    animation: fadeInUp 2s;
+    animation: fadeInUp 1s;
     position: relative;
     z-index: 4;
     text-shadow:
