@@ -69,7 +69,11 @@ select {
 input[type="text"]:focus,
 input[type="email"]:focus,
 select:focus {
-    border-color: rgb(235, 238, 240);
+    border-color: #3498db;
+}
+
+select:focus {
+  border-color: #3498db;
 }
 
 select:focus + label {
@@ -104,13 +108,8 @@ h1 {
     z-index: 4;
     text-shadow:
     0 0 5px #fff,
-    0 0 10px #0ff,
-    0 0 20px #0ff,
-    0 0 40px #0ff,
-    0 0 80px #0ff,
-    0 0 90px #0ff,
-    0 0 100px #0ff,
-    0 0 150px #0ff;
+    0 0 10px #fff,
+    0 0 20px #fff;
 
     -webkit-text-stroke-width: 1.8px;
     -webkit-text-stroke-color: rgb(255, 255, 255);
