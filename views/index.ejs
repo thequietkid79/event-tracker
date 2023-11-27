@@ -10,19 +10,19 @@
     <div>
     <h1 contenteditable spellcheck="false">Event Tracker</h1>
     <form action="/subscribe" method="POST">
-        <label for="topic">Topic:</label>
-        <input type="text" id="topic" name="topic" placeholder="Input your topic" autofocus required><br><br>
+        <label for="topic">Event:</label>
+        <input type="text" id="topic" name="topic" placeholder="Name of the event or topic" autofocus required><br><br>
 
-       <label for="scheduleOption">Schedule Option:</label>
+       <label for="scheduleOption">Frequency:</label>
         <select id="scheduleOption" name="scheduleOption" required> 
-            <option value="everyMinute">Every Minute</option>
-            <option value="hourly">Hourly</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
+            <option value="everyMinute">Every minute</option>
+            <option value="hourly">Every hour</option>
+            <option value="daily">Every day</option>
+            <option value="weekly">Every week</option>
         </select><br><br>
         
         <label for="email">Email:</label>
-        <input type="email" id="email" name="email" placeholder="Input your email" required><br><br>
+        <input type="email" id="email" name="email" placeholder="Email" required><br><br>
         
         <input type="submit" value="Subscribe">
     </form>
