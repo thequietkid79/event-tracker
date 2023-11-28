@@ -96,7 +96,7 @@ function formatEmailBody(updates) {
 
   return emailBody;
 }
-// define default the route
+// define the default route
 app.get("/", (req, res) => {
   res.render("index.ejs");
 });
@@ -138,7 +138,7 @@ app.post('/subscribe', async (req, res) => {
   }
 
   // send confirmation mail
-  const confirmationMessage =`Subscription confirmed for ${topic} updates. You will receive updates every ${scheduleOption}.`
+  const confirmationMessage =`All set! You'll now get updates on ${topic} every ${scheduleOption}.`
   await sendEmail(emailFrom, email, 'Subscription Confirmation', confirmationMessage);
 
   const subscribedTopics = userSubscriptions[email].topics;
