@@ -1,3 +1,4 @@
+// import the necessary modules
 import express from 'express';
 import bodyParser from 'body-parser';
 import cron from 'node-cron';
@@ -9,19 +10,23 @@ const app = express();
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// provide the google search api key
 const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_API;
 
+// define the email from which the updates will be delivered
 const emailFrom = process.env.MY_EMAIL;
 
 const userSubscriptions = {};
 
+// define the schedule options
 const cronExpressions = {
-  hourly: '0 * * * *',
-  daily: '0 9 * * *',
-  weekly: '0 9 * * 1',
-  everyMinute: '* * * * *',
+  hour: '0 * * * *',
+  day: '0 9 * * *',
+  week: '0 9 * * 1',
+  minute: '* * * * *',
 };
 
+// provide the credentials for the node mailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -46,6 +51,7 @@ async function sendEmail(from, to, subject, html) {
   }
 }
 
+// get the search results from the google custom search api
 async function getSearchResults(topic) {
   const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_SEARCH_API_KEY}&cx=a60c4c10e04c546d5&q=${topic}`;
   const response = await axios.get(url);
@@ -53,6 +59,7 @@ async function getSearchResults(topic) {
   return searchResults;
 }
 
+// process the search results
 async function processSearchResults(searchResults) {
   const updates = [];
 
@@ -71,9 +78,9 @@ async function processSearchResults(searchResults) {
   return updates;
 }
 
+// format the email body
 function formatEmailBody(updates) {
   let emailBody = '';
-
   for (const update of updates) {
     emailBody += `
         <div style="margin-bottom: 20px; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background-color: #f5f5f5;">
@@ -98,6 +105,7 @@ app.post('/subscribe', async (req, res) => {
   const scheduleOption = req.body.scheduleOption;
   const email = req.body.email;
 
+// check if the schedule option is valid
   if (!cronExpressions.hasOwnProperty(scheduleOption)) {
     res.json({
       success: false,
@@ -117,7 +125,7 @@ app.post('/subscribe', async (req, res) => {
 
   if (!userSubscriptions[email].topics.includes(topic)) {
     userSubscriptions[email].topics.push(topic);
-
+// define the constants required for the cron job
     const cronJob = cron.schedule(cronExpression, async () => {
       const searchResults = await getSearchResults(topic);
       const updates = await processSearchResults(searchResults);
@@ -128,8 +136,8 @@ app.post('/subscribe', async (req, res) => {
     userSubscriptions[email].cronJob = cronJob;
   }
 
-  // Send confirmation email
-  const confirmationMessage =`Subscription confirmed for ${topic} updates. You will receive updates ${scheduleOption}.`
+  // send confirmation mail
+  const confirmationMessage =`Subscription confirmed for ${topic} updates. You will receive updates every ${scheduleOption}.`
   await sendEmail(emailFrom, email, 'Subscription Confirmation', confirmationMessage);
 
   const subscribedTopics = userSubscriptions[email].topics;
