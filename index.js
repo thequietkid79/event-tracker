@@ -7,11 +7,11 @@ import axios from 'axios';
 import 'dotenv/config'
 
 const app = express();
-const port = 3001;
+const port = 3000;
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// provide the google search api key
+// use the google search api key
 const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_API;
 
 // define the email from which the updates will be delivered
@@ -35,6 +35,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.MY_PASSWORD,
   }
 });
+
 // define the email function
 async function sendEmail(from, to, subject, html) {
   const mailOptions = {
@@ -124,9 +125,10 @@ app.post('/subscribe', async (req, res) => {
     };
   }
 
+  // create a cron job for the user
   if (!userSubscriptions[email].topics.includes(topic)) {
     userSubscriptions[email].topics.push(topic);
-// create a cron job for the user
+
     const cronJob = cron.schedule(cronExpression, async () => {
       const searchResults = await getSearchResults(topic);
       const updates = await processSearchResults(searchResults);
