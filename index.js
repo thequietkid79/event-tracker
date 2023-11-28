@@ -126,7 +126,7 @@ app.post('/subscribe', async (req, res) => {
 
   if (!userSubscriptions[email].topics.includes(topic)) {
     userSubscriptions[email].topics.push(topic);
-// create a corn job for the user
+// create a cron job for the user
     const cronJob = cron.schedule(cronExpression, async () => {
       const searchResults = await getSearchResults(topic);
       const updates = await processSearchResults(searchResults);
