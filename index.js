@@ -7,6 +7,7 @@ import axios from 'axios';
 import 'dotenv/config'
 
 const app = express();
+const port = 3001;
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -34,7 +35,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.MY_PASSWORD,
   }
 });
-
+// define the email function
 async function sendEmail(from, to, subject, html) {
   const mailOptions = {
     from,
@@ -95,11 +96,11 @@ function formatEmailBody(updates) {
 
   return emailBody;
 }
-
+// define default the route
 app.get("/", (req, res) => {
   res.render("index.ejs");
 });
-
+// define the subscribe route
 app.post('/subscribe', async (req, res) => {
   const topic = req.body.topic;
   const scheduleOption = req.body.scheduleOption;
@@ -125,7 +126,7 @@ app.post('/subscribe', async (req, res) => {
 
   if (!userSubscriptions[email].topics.includes(topic)) {
     userSubscriptions[email].topics.push(topic);
-// define the constants required for the cron job
+// create a corn job for the user
     const cronJob = cron.schedule(cronExpression, async () => {
       const searchResults = await getSearchResults(topic);
       const updates = await processSearchResults(searchResults);
@@ -144,6 +145,6 @@ app.post('/subscribe', async (req, res) => {
   res.render("index.ejs", { message: subscribedTopics });
 });
 
-app.listen(3001, () => {
-  console.log('Server listening on port 3001');
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
 });
