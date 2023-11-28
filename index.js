@@ -97,10 +97,12 @@ function formatEmailBody(updates) {
 
   return emailBody;
 }
+
 // define the default route
 app.get("/", (req, res) => {
   res.render("index.ejs");
 });
+
 // define the subscribe route
 app.post('/subscribe', async (req, res) => {
   const topic = req.body.topic;
