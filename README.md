@@ -37,4 +37,4 @@ docker build -t event-tracker .
 ```bash
 docker run -d -p 3000:3000 -v $(pwd):/app event-tracker
 ```
-The application should now be running at <http:localhost:3000>
+The application should now be running at <http://localhost:3000>
