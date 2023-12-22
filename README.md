@@ -18,3 +18,25 @@ Features
 * Ability to automatically provide the updates on your email.
 * Ability to automatically provide the updates on other platforms.(Pending)
 * Ability to provide additional information about the event.(Pending)
+
+##Local Setup
+
+1. Install [Docker](https://www.docker.com/get-started) on your machine.
+2. Clone the repository:
+
+```bash
+git clone git@github.com:aniketh3014/event-tracker.git
+```
+3. Change the working directory
+```bash
+cd event-tracker
+```
+4. Build the Docker image:
+```bash
+docker build -t event-tracker .
+```
+5. Run the Docker container:
+```bash
+docker run -d -p 3000:3000 -v $(pwd):/app event-tracker
+```
+The application should now be running at [](http:localhost:3000)
