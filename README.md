@@ -44,4 +44,4 @@ Event Tracker allows you to monitor updates for any event of your choice. Simply
     docker run -d -p 3000:3000 -v $(pwd):/app event-tracker
     ```
 
-The application is now accessible at [http://localhost:3000](http://localhost:3000).
+The application will now be accessible at [http://localhost:3000](http://localhost:3000).
